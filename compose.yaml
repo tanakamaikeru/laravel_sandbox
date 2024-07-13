@@ -1,0 +1,68 @@
+volumes:
+  db-store:
+
+
+services:
+  laravel-apache:
+    build:
+      context: './docker/php-apache'
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    container_name: laravel-apache
+    command: /bin/sh -c "apache2ctl start && tail -f /dev/null"
+    ports:
+      - target: 80
+        published: 8080
+        protocol: tcp
+        mode: host
+    environment:
+      - APACHE_RUN_USER=#1000
+      - APACHE_RUN_GROUP=#1000
+    volumes:
+      - type: bind
+        source: ./
+        target: /var/www/html
+
+  db:
+    image: mysql:8.4
+    container_name: mysql
+    ports:
+      - target: 3306
+        published: 13306
+        protocol: tcp
+        mode: host
+    volumes:
+      - type: volume
+        source: db-store
+        target: /var/lib/mysql
+        volume:
+          nocopy: true
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD:-password}
+      - MYSQL_DATABASE=${DB_DATABASE:-laravel}
+      - MYSQL_USER=${DB_USERNAME:-laravel}
+      - MYSQL_PASSWORD=${DB_PASSWORD-:-password}
+
+  mailpit:
+    image: axllent/mailpit
+    container_name: mailpit
+    ports:
+      - target: 8025
+        published: 18025
+        protocol: tcp
+        mode: host
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin
+    ports:
+      - target: 80
+        published: 8081
+        protocol: tcp
+        mode: host
+    environment:
+      - PMA_ARBITRARY=1
+      - PMA_HOST=mysql
+      - PMA_USER=root
+      - PMA_PASSWORD=${DB_ROOT_PASSWORD:-password}
