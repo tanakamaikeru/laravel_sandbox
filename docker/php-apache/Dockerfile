@@ -1,6 +1,6 @@
 FROM php:8.3-apache
 
-RUN <<-EOF
+RUN <<EOF
     apt-get update
     apt-get install -y --no-install-recommends \
         curl \
@@ -22,11 +22,14 @@ RUN <<-EOF
 EOF
 
 
-RUN echo "ServerName laravel-apache" >> /etc/apache2/apache2.conf
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
-RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
-RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
-RUN echo "export APACHE_LYNX='lynx -dump'" >> /etc/apache2/envvars
+RUN <<EOF
+    echo "ServerName laravel-apache" >> /etc/apache2/apache2.conf
+    sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
+    sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
+    echo "export APACHE_LYNX='lynx -dump'" >> /etc/apache2/envvars
+EOF
+
 
 COPY ./php.ini /usr/local/etc/php/php.ini
 COPY ./server-status.conf /etc/apache2/conf-available/server-status.conf
@@ -47,19 +50,17 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 ARG UID
 ARG GID
-ARG USERNAME=laraveler
-ARG GROUPNAME=laraveler
-ARG PASSWORD=laraveler
 
 RUN <<EOF
-    groupadd -g ${GID:-1000} $GROUPNAME
-    useradd -m -s /bin/bash -u ${UID:-1000} -g $GID -G sudo $USERNAME
-    echo $USERNAME:$PASSWORD | chpasswd
-    echo "$USERNAME ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+    groupadd -g ${GID:-1000} vscode
+    useradd -m -s /bin/bash -u ${UID:-1000} -g $GID -G sudo vscode
+    echo vscode:password | chpasswd
+    echo "vscode ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 EOF
 
-RUN mkdir -p /home/laraveler/.composer && \
-    chown -R laraveler:laraveler /home/laraveler
+RUN mkdir -p /home/vscode/.composer && \
+    chown -R vscode:vscode /home/vscode
 
 RUN a2enmod rewrite
-RUN a2enconf server-status
+
+USER vscode
